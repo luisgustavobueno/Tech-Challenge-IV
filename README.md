@@ -44,6 +44,10 @@ pip install -r requirements.txt
 python face_emotion_detection.py
 ```
 
+> A execução total leva um determinado tempo a depender do poder de processamento da CPU.
+>
+> Por ex. Um Ryzen 5 5600G leva em torno de 35 minutos.
+
 O vídeo processado será salvo como `output_video.mp4`, e o resumo será exibido no terminal.
 
 ## Explicando as funções
@@ -87,14 +91,21 @@ Ao final da execução, o código gera um resumo no terminal e um arquivo `summa
 3. **Movimentos detectados**: Contagem de movimentos específicos (mão levantada e movimento da cabeça).
 4. **Rostos reconhecidos**: Lista de rostos identificados e suas emoções dominantes.
 
-### Exemplo de Saída:
+### Resumo de saída
 
-```plaintext
-Resumo do Vídeo:
-Total de frames analisados: 1500
-Número de anomalias detectadas: 12
-Movimentos detectados: {'hand_up': 5, 'head_moving': 8}
-Rostos reconhecidos: {'João': ['happy','angry'], 'Maria': ['neutral'], 'Desconhecido':, ['sad']}
+```bash
+Total de frames analisados: 3326
+Número de anomalias detectadas: 10
+Movimentos detectados: {'hand_up': 23, 'head_moving': 33}
+Rostos reconhecidos:
+{
+    'Joao': ['happy', 'angry', 'surprise', 'fear', 'neutral', 'sad'],
+    'Ana': ['fear', 'neutral', 'sad', 'angry', 'surprise', 'happy'],
+    'Desconhecido': ['neutral', 'fear', 'sad', 'angry', 'happy', 'surprise'],
+    'Bruno': ['neutral', 'happy', 'angry'],
+    'Maria': ['surprise', 'neutral', 'happy', 'fear', 'angry'],
+    'Jhon': ['neutral', 'happy', 'angry', 'sad', 'fear', 'surprise']
+}
 ```
 
 ## Considerações Finais
