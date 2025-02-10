@@ -1,0 +1,4 @@
+Total de frames analisados: 3326
+Número de anomalias detectadas: 10
+Movimentos detectados: {'hand_up': 23, 'head_moving': 33}
+Rostos reconhecidos: {'Joao': ['happy', 'angry', 'surprise', 'fear', 'neutral', 'sad'], 'Ana': ['fear', 'neutral', 'sad', 'angry', 'surprise', 'happy'], 'Desconhecido': ['neutral', 'fear', 'sad', 'angry', 'happy', 'surprise'], 'Bruno': ['neutral', 'happy', 'angry'], 'Maria': ['surprise', 'neutral', 'happy', 'fear', 'angry'], 'Jhon': ['neutral', 'happy', 'angry', 'sad', 'fear', 'surprise']}
