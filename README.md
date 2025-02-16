@@ -1,14 +1,30 @@
-# Análise de Vídeo com Reconhecimento Facial e Detecção de Atividades
+# Tech Challenge <04>
+
+## Grupo 2
+
+- Julio Cesario de Paiva Leão (julio0023@live.com)
+- Luis Gustavo Bueno Colombo (luisgustavobuenocolombo@gmail.com)
+
+> Antes de tudo, veja vídeo gerado após o experimento :wink:
+
+[![Vídeo gerado](/img/ezgif-6a3a803d42cd87.gif)](/output_video.mp4)
 
 ## Objetivo
 
-O objetivo deste código é realizar a análise de vídeos para:
+Nesse projeto temos o objetivo de analisar uma vídeo e implementar técnicas de reconhecimento facial e detecção de movimentos e emoções, através de algoritmos python de Deep Learning.
+
+Em resumo, esse projeto visa atender os seguintes requisitos:
 
 1. **Reconhecimento facial**: Identificar e marcar os rostos presentes no vídeo.
 2. **Análise de expressões emocionais**: Analisar as expressões emocionais dos rostos identificados.
 3. **Detecção de atividades**: Detectar e categorizar atividades como mão levantada e movimento da cabeça.
 4. **Detecção de anomalias**: Identificar movimentos bruscos ou comportamentos atípicos.
 5. **Geração de resumo**: Criar um resumo automático das principais atividades, emoções e anomalias detectadas no vídeo.
+
+## URLs do projeto
+
+- [Vídeo do YouTube](https://youtu.be/Upi7jtRrp_g)
+- [Repositório do GitHub](https://github.com/luisgustavobueno/Tech-Challenge-IV)
 
 ## Como Instalar e Executar
 
