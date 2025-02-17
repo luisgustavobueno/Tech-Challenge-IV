@@ -2,40 +2,59 @@ import cv2
 import mediapipe as mp
 import face_recognition
 from deepface import DeepFace
-import numpy as np
 import os
 from tqdm import tqdm
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # Força uso da CPU
-SHOW_VIDEO = False
-FACE_INFO = {}
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"   # Força uso da CPU
+SHOW_VIDEO = False                          # Modifique para True para exibir o vídeo processado
+FACE_INFO = {}                              # Dicionário para armazenar informações dos rostos detectados
+FRAME_SKIP = 1                              # Modifique para aumentar a velocidade de processamento, porém diminui a precisão
+EMOTION_THRESHOLD = 95                      # Modifique para alterar a sensibilidade da detecção de emoções
+ANOMALY_THRESHOLD = 0.2                     # Modifique para alterar a sensibilidade da detecção de anomalias
+HEAD_MOVEMENT_THRESHOLD = 0.15              # Modifique para alterar a sensibilidade da detecção de movimentos de cabeça
+last_dominant_emotion = None                # Variável global para armazenar a última emoção detectada
 
 
 class PoseDetector:
+    '''Classe para detecção de poses humanas'''
     def __init__(self):
         self.mp_pose = mp.solutions.pose
         self.pose = self.mp_pose.Pose()
         self.mp_drawing = mp.solutions.drawing_utils
 
     def process_frame(self, frame):
+        '''Função para processar um frame e detectar poses humanas'''
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         return self.pose.process(rgb_frame)
 
     def draw_landmarks(self, frame, landmarks):
+        '''Função para desenhar os landmarks das poses no frame'''
         self.mp_drawing.draw_landmarks(frame, landmarks, self.mp_pose.POSE_CONNECTIONS)
 
     def is_hand_up(self, landmarks):
-        left_eye = landmarks[self.mp_pose.PoseLandmark.LEFT_EYE.value]
+        '''Função para verificar se a mão está levantada'''
         left_hand = landmarks[self.mp_pose.PoseLandmark.LEFT_INDEX.value]
-        return left_hand.y < left_eye.y
+        right_hand = landmarks[self.mp_pose.PoseLandmark.RIGHT_INDEX.value]
 
-    def is_head_moving(self, prev_nose, curr_nose, threshold=0.1):
-        return (
-            abs(curr_nose.x - prev_nose.x) > threshold
-            or abs(curr_nose.y - prev_nose.y) > threshold
-        )
+        left_shoulder = landmarks[self.mp_pose.PoseLandmark.LEFT_SHOULDER.value]
+        right_shoulder = landmarks[self.mp_pose.PoseLandmark.RIGHT_SHOULDER.value]
+
+        left_hand_up = left_hand.y < left_shoulder.y
+        right_hand_up = right_hand.y < right_shoulder.y
+
+
+        return left_hand_up or right_hand_up
+
+    def is_head_moving(self, prev_nose, curr_nose):
+        '''Função para verificar se a cabeça está se movendo'''
+
+        dx = abs(curr_nose.x - prev_nose.x)
+        dy = abs(curr_nose.y - prev_nose.y)
+
+        return dx > HEAD_MOVEMENT_THRESHOLD or dy > HEAD_MOVEMENT_THRESHOLD
 
     def detect_movements(self, landmarks, prev_nose):
+        '''Função para detectar movimentos de poses humanas'''
         movements = {}
 
         movements["hand_up"] = self.is_hand_up(landmarks)
@@ -47,12 +66,14 @@ class PoseDetector:
 
 
 class FaceRecognition:
+    '''Classe para reconhecimento de faces e detecção de emoções'''
     def __init__(self, known_faces_dir="images"):
         self.known_face_encodings = []
         self.known_face_names = []
         self.load_known_faces(known_faces_dir)
 
     def load_known_faces(self, directory):
+        '''Função para carregar imagens de rostos conhecidos'''
         if not os.path.exists(directory):
             print(f"Diretório {directory} não encontrado!")
             return
@@ -68,6 +89,7 @@ class FaceRecognition:
                 )  # Nome sem extensão
 
     def recognize_faces(self, frame):
+        '''Função para reconhecer rostos em um frame'''
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         face_locations = face_recognition.face_locations(rgb_frame)
         face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
@@ -86,18 +108,28 @@ class FaceRecognition:
         return face_info
 
     def detect_emotion(self, frame, face_location):
+        '''Função para detectar emoções em um rosto'''
         top, right, bottom, left = face_location
         face_crop = frame[top:bottom, left:right]
         try:
             analysis = DeepFace.analyze(
                 face_crop, actions=["emotion"], enforce_detection=False
             )
-            return analysis[0]["dominant_emotion"]
+            dominant_emotion = analysis[0]["dominant_emotion"]
+            emotion_score = analysis[0]["emotion"][dominant_emotion]
+            global last_dominant_emotion
+
+            if emotion_score >= EMOTION_THRESHOLD:
+                last_dominant_emotion = dominant_emotion
+                return dominant_emotion
+            else:
+                return last_dominant_emotion
         except Exception:
             return "Desconhecido"
 
 
 def display_info(frame, face_info, face_recognizer):
+    '''Função para exibir informações dos rostos detectados na tela'''
     for name, face_location in face_info:
         top, right, bottom, left = face_location
         emotion = face_recognizer.detect_emotion(frame, face_location)
@@ -117,6 +149,7 @@ def display_info(frame, face_info, face_recognizer):
 
 
 def format_faces_output(name, emotion):
+    '''Função para formatar as informações dos rostos detectados'''
     if name in FACE_INFO:
         if emotion not in FACE_INFO[name]:
             FACE_INFO[name].append(emotion)
@@ -125,6 +158,7 @@ def format_faces_output(name, emotion):
 
 
 def display_movement_text(frame, movements, counts, movement_flags):
+    '''Função para exibir informações de movimentos na tela'''
     y_offset = 30
     for movement, detected in movements.items():
         if detected and not movement_flags[movement]:
@@ -147,7 +181,8 @@ def display_movement_text(frame, movements, counts, movement_flags):
         y_offset += 30
 
 
-def detect_anomalies(landmarks, prev_nose, anomaly_threshold=0.2):
+def detect_anomalies(landmarks, prev_nose):
+    '''Função para detectar anomalias em poses humanas'''
     if prev_nose is None:
         return False
 
@@ -155,10 +190,11 @@ def detect_anomalies(landmarks, prev_nose, anomaly_threshold=0.2):
     dx = abs(curr_nose.x - prev_nose.x)
     dy = abs(curr_nose.y - prev_nose.y)
 
-    return dx > anomaly_threshold or dy > anomaly_threshold
+    return dx > ANOMALY_THRESHOLD or dy > ANOMALY_THRESHOLD
 
 
-def generate_summary(total_frames, anomaly_count, movement_counts, face_info):
+def generate_summary(total_frames, anomaly_count, movement_counts):
+    '''Função para gerar um resumo do vídeo processado'''
     summary = {
         "Total de frames analisados": total_frames,
         "Número de anomalias detectadas": anomaly_count,
@@ -169,6 +205,7 @@ def generate_summary(total_frames, anomaly_count, movement_counts, face_info):
 
 
 def save_summary_to_file(summary, filename="summary.txt"):
+    '''Função para salvar o resumo em um arquivo de texto'''
     with open(filename, "w", encoding="utf-8") as file:
         for key, value in summary.items():
             file.write(f"{key}: {value}\n")
@@ -176,6 +213,7 @@ def save_summary_to_file(summary, filename="summary.txt"):
 
 
 def process_video(input_path, output_path):
+    '''Função para processar um vídeo e detectar anomalias'''
     pose_detector = PoseDetector()
     face_recognizer = FaceRecognition()
     cap = cv2.VideoCapture(input_path)
@@ -196,11 +234,17 @@ def process_video(input_path, output_path):
     movement_flags = {"hand_up": False, "head_moving": False}
     prev_nose = None
     anomaly_count = 0
+    frame_count = 0
 
     for _ in tqdm(range(total_frames), desc="Processing video"):
         ret, frame = cap.read()
         if not ret:
             break
+
+        frame_count += 1
+        if frame_count % FRAME_SKIP != 0:
+            out.write(frame)
+            continue
 
         results = pose_detector.process_frame(frame)
 
@@ -234,7 +278,7 @@ def process_video(input_path, output_path):
     cv2.destroyAllWindows()
 
     # Gerar resumo
-    summary = generate_summary(total_frames, anomaly_count, movement_counts, face_info)
+    summary = generate_summary(total_frames, anomaly_count, movement_counts)
     print("Resumo do Vídeo:")
     for key, value in summary.items():
         print(f"{key}: {value}")
